@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#include "matrix.h"
+
 struct Matrix {
 	// length of rows and cols
 	int row, col;
@@ -19,6 +21,10 @@ matrix_t *matrix_build(int row, int col) {
 
 	for (int set_col = 0; set_col < row; set_col++) {
 		matrix[set_col] = malloc(sizeof(float) * col);
+
+		for (int load_val = 0; load_val < col; load_val++) {
+			matrix[set_col][load_val] = 0;
+		}
 	}
 
 	matrix_t *r_m = malloc(sizeof(matrix_t));
@@ -106,7 +112,7 @@ matrix_t *matrix_subtract(matrix_t *m1, matrix_t *m2, char *subber_p) {
 	if (!check_dimensions_add_sub(m1, m2))
 		return NULL;
 
-	int make_new = adder_p[0] == '-' && adder_p[1] == 'n';
+	int make_new = subber_p[0] == '-' && subber_p[1] == 'n';
 
 	matrix_t *r_m = NULL;
 	if (make_new)
@@ -142,22 +148,75 @@ matrix_t *matrix_multiply(matrix_t *m1, matrix_t *m2) {
 	return r_m;
 }
 
+int matrix_multiply_scaler(matrix_t *m1, float scaler) {
+	for (int i = 0; i < m1->row; i++) {
+		for (int j = 0; j < m1->col; j++) {
+			m1->matrix[i][j] *= scaler;
+		}
+	}
 
-int partial_derivative(int cols, matrix_t *m1, matrix_t *expected, matrix_t *d_variable, matrix_t *variable) {
+	return 0;
+}
+
+int matrix_print(matrix_t *m) {
+	int col_num = m->col;
+
+	printf("|");
+	for (int add_dash = 0; add_dash < col_num; add_dash++)
+		printf("-------%c", add_dash != col_num - 1 ? '-' : '|');
+	printf("\n");
+
+
+	int title_len = (col_num * 8) - 16;
+	printf("|");
+	for (int add_title = 0; add_title < title_len * 0.5; add_title++)
+		printf(" ");
+	printf("(%d)x(%d) Matrix", m->row, m->col);
+	for (int add_title = 0; add_title < title_len * 0.5; add_title++)
+		printf(" ");
+	printf(" |\n");
+
+	printf("|");
+	for (int add_dash = 0; add_dash < col_num; add_dash++)
+		printf("-------%c", add_dash != col_num - 1 ? '-' : '|');
+	printf("\n");
+
+	for (int print_row = 0; print_row < m->row; print_row++) {
+
+		printf("|");
+		for (int print_col = 0; print_col < m->col; print_col++) {
+			printf(" %01.3f |", m->matrix[print_row][print_col]);
+		}
+		printf("\n");
+	}
+
+	printf("|");
+	for (int add_dash = 0; add_dash < col_num; add_dash++)
+		printf("-------%c", add_dash != col_num - 1 ? '-' : '|');
+	printf("\n");
+
+	return 0;
+}
+
+
+int partial_derivative(int cols, matrix_t *m1, matrix_t *expected, matrix_t *variable, matrix_t *d_variable) {
 
 	// compute m1Xvariable
 	matrix_t *m1_variable = matrix_multiply(m1, variable);
+	matrix_print(m1);
+	matrix_print(variable);
+	matrix_print(m1_variable);
 	// first comput the sum of:
 	// (estimated - expected) * m1_j
 	// for all values i = 0 -> cols
 	// for each weight value v in d_variable
 	float sum;
-	for (int v = 0; v < d_variable->row) {
+	for (int v = 0; v < d_variable->row; v++) {
 		sum = 0;
 
 		for (int i = 0; i < cols; i++) {
 			// compute error of estimated versus expected
-			float error = m1_variable[0][i] - expected[0][i];
+			float error = m1_variable->matrix[i][0] - expected->matrix[i][0];
 			error *= m1->matrix[v][i];
 
 			sum += error;
@@ -165,7 +224,7 @@ int partial_derivative(int cols, matrix_t *m1, matrix_t *expected, matrix_t *d_v
 
 		sum /= cols;
 
-		d_variable[0][v] = sum;
+		d_variable->matrix[v][0] = sum;
 	}
 
 	return 0;
@@ -183,7 +242,7 @@ int partial_derivative(int cols, matrix_t *m1, matrix_t *expected, matrix_t *d_v
 */
 int matrix_gradient_descent(matrix_t *m1, matrix_t *variable, matrix_t *expected) {
 	for (int set = 0; set < variable->row; set++)
-		variable->matrix[0][set] = 0;
+		variable->matrix[set][0] = 0;
 
 	int col = m1->col;
 
@@ -196,6 +255,7 @@ int matrix_gradient_descent(matrix_t *m1, matrix_t *variable, matrix_t *expected
 	while (iter < iteration_max) {
 		partial_derivative(col, m1, expected, variable, d_variable);
 		// subtract d_variable from variable:
+		matrix_multiply_scaler(d_variable, 0.5);
 		matrix_subtract(variable, d_variable, "");
 
 		iter++;
