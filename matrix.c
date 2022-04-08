@@ -5,8 +5,8 @@
 #include "matrix.h"
 
 struct Matrix {
-	// length of rows and cols
-	int row, col;
+	// length of x and y
+	int width, height;
 
 	float **matrix;
 };
@@ -14,23 +14,23 @@ struct Matrix {
 /*
 	builds and returns a simple matrix:
 
-	row and col define the dimensions of the given matrix
+	width and height define the dimensions of the given matrix
 */
-matrix_t *matrix_build(int row, int col) {
-	float **matrix = malloc(sizeof(float *) * row);
+matrix_t *matrix_build(int width, int height) {
+	float **matrix = malloc(sizeof(float *) * width);
 
-	for (int set_col = 0; set_col < row; set_col++) {
-		matrix[set_col] = malloc(sizeof(float) * col);
+	for (int x = 0; x < width; x++) {
+		matrix[x] = malloc(sizeof(float) * height);
 
-		for (int load_val = 0; load_val < col; load_val++) {
-			matrix[set_col][load_val] = 0;
+		for (int y = 0; y < height; y++) {
+			matrix[x][y] = 0;
 		}
 	}
 
 	matrix_t *r_m = malloc(sizeof(matrix_t));
 
-	r_m->row = row;
-	r_m->col = col;
+	r_m->width = width;
+	r_m->height = height;
 
 	r_m->matrix = matrix;
 
@@ -38,9 +38,9 @@ matrix_t *matrix_build(int row, int col) {
 }
 
 int matrix_load(matrix_t *m, float **input) {
-	for (int i = 0; i < m->row; i++) {
-		for (int j = 0; j < m->col; j++) {
-			m->matrix[i][j] = input[i][j];
+	for (int x = 0; x < m->width; x++) {
+		for (int y = 0; y < m->height; y++) {
+			m->matrix[x][y] = input[x][y];
 		}
 	}
 
@@ -49,13 +49,13 @@ int matrix_load(matrix_t *m, float **input) {
 
 // copies values in matrix m and returns the copy
 matrix_t *matrix_copy(matrix_t *m) {
-	matrix_t *n_m = matrix_build(m->row, m->col);
+	matrix_t *n_m = matrix_build(m->width, m->height);
 
 	// copy values into n_m
-	for (int i = 0; i < m->row; i++) {
-		for (int j = 0; j < m->col; j++) {
+	for (int x = 0; x < m->width; x++) {
+		for (int y = 0; y < m->height; y++) {
 
-			n_m->matrix[i][j] = m->matrix[i][j];
+			n_m->matrix[x][y] = m->matrix[x][y];
 		}
 	}
 
@@ -64,25 +64,25 @@ matrix_t *matrix_copy(matrix_t *m) {
 
 int check_dimensions_add_sub(matrix_t *m1, matrix_t *m2) {
 	// check dimensions
-	if (m1->row != m2->row)
+	if (m1->width != m2->width)
 		return 0;
 
-	if (m1->col != m2->col)
+	if (m1->height != m2->height)
 		return 0;
 
 	return 1;
 }
 
 int matrix_add_sub_helper(matrix_t *r_m, matrix_t *m1, matrix_t *m2, int is_add) {
-	for (int add_row = 0; add_row < m1->row; add_row++) {
+	for (int x = 0; x < m1->width; x++) {
 
-		for (int add_col = 0; add_col < m1->col; add_col++) {
+		for (int y = 0; y < m1->height; y++) {
 			if (r_m)
-				r_m->matrix[add_row][add_col] = is_add ? m1->matrix[add_row][add_col] + m2->matrix[add_row][add_col] :
-					m1->matrix[add_row][add_col] - m2->matrix[add_row][add_col];
+				r_m->matrix[x][y] = is_add ? m1->matrix[x][y] + m2->matrix[x][y] :
+					m1->matrix[x][y] - m2->matrix[x][y];
 			else
-				m1->matrix[add_row][add_col] = is_add ? m1->matrix[add_row][add_col] + m2->matrix[add_row][add_col] :
-					m1->matrix[add_row][add_col] - m2->matrix[add_row][add_col];
+				m1->matrix[x][y] = is_add ? m1->matrix[x][y] + m2->matrix[x][y] :
+					m1->matrix[x][y] - m2->matrix[x][y];
 		}
 	}
 
@@ -101,7 +101,7 @@ matrix_t *matrix_add(matrix_t *m1, matrix_t *m2, char *adder_p) {
 
 	matrix_t *r_m = NULL;
 	if (make_new)
-		r_m = matrix_build(m1->row, m1->col);
+		r_m = matrix_build(m1->width, m1->height);
 
 	matrix_add_sub_helper(r_m, m1, m2, 1);
 
@@ -116,7 +116,7 @@ matrix_t *matrix_subtract(matrix_t *m1, matrix_t *m2, char *subber_p) {
 
 	matrix_t *r_m = NULL;
 	if (make_new)
-		r_m = matrix_build(m1->row, m1->col);
+		r_m = matrix_build(m1->width, m1->height);
 
 	matrix_add_sub_helper(r_m, m1, m2, 0);
 
@@ -124,23 +124,28 @@ matrix_t *matrix_subtract(matrix_t *m1, matrix_t *m2, char *subber_p) {
 }
 
 int check_dimensions_multi(matrix_t *m1, matrix_t *m2) {
-	if (m1->col != m2->row)
+	if (m1->width != m2->height)
 		return 0;
 
 	return 1;
 }
 
+// comments made with the example 3x3 m1, 1x3 m2
 matrix_t *matrix_multiply(matrix_t *m1, matrix_t *m2) {
 	if (!check_dimensions_multi(m1, m2))
 		return NULL;
 
-	matrix_t *r_m = matrix_build(m1->row, m2->col);
-	for (int calc_row = 0; calc_row < m1->row; calc_row++) {
-		for (int calc_col = 0; calc_col < m2->col; calc_col++) {
+	// create return matrix as 3x1 matrix
+	matrix_t *r_m = matrix_build(m2->width, m1->height);
 
-			r_m->matrix[calc_row][calc_col] = 0;
-			for (int multi = 0; multi < m1->col; multi++) {
-				r_m->matrix[calc_row][calc_col] += m1->matrix[calc_row][multi] * m2->matrix[multi][calc_col];
+	// loop through each position in r_m and
+	// compute value
+	for (int r_m_x = 0; r_m_x < r_m->width; r_m_x++) {
+		for (int r_m_y = 0; r_m_y < r_m->height; r_m_y++) {
+
+			r_m->matrix[r_m_x][r_m_y] = 0;
+			for (int multi = 0; multi < m1->width; multi++) {
+				r_m->matrix[r_m_x][r_m_y] += m1->matrix[multi][r_m_y] * m2->matrix[r_m_x][multi];
 			}
 		}
 	}
@@ -149,9 +154,9 @@ matrix_t *matrix_multiply(matrix_t *m1, matrix_t *m2) {
 }
 
 int matrix_multiply_scaler(matrix_t *m1, float scaler) {
-	for (int i = 0; i < m1->row; i++) {
-		for (int j = 0; j < m1->col; j++) {
-			m1->matrix[i][j] *= scaler;
+	for (int x = 0; x < m1->width; x++) {
+		for (int y = 0; y < m1->height; y++) {
+			m1->matrix[x][y] *= scaler;
 		}
 	}
 
@@ -159,104 +164,109 @@ int matrix_multiply_scaler(matrix_t *m1, float scaler) {
 }
 
 int matrix_print(matrix_t *m) {
-	int col_num = m->col;
+	int cols = m->width;
 
 	printf("|");
-	for (int add_dash = 0; add_dash < col_num; add_dash++)
-		printf("-------%c", add_dash != col_num - 1 ? '-' : '|');
+	for (int add_dash = 0; add_dash < cols; add_dash++)
+		printf("-------%c", add_dash != cols - 1 ? '-' : '|');
 	printf("\n");
 
 
-	int title_len = (col_num * 8) - 16;
+	int title_len = (cols * 8) - 16;
 	printf("|");
 	for (int add_title = 0; add_title < title_len * 0.5; add_title++)
 		printf(" ");
-	printf("(%d)x(%d) Matrix", m->row, m->col);
+	printf("(%d)x(%d) Matrix", m->width, m->height);
 	for (int add_title = 0; add_title < title_len * 0.5; add_title++)
 		printf(" ");
 	printf(" |\n");
 
 	printf("|");
-	for (int add_dash = 0; add_dash < col_num; add_dash++)
-		printf("-------%c", add_dash != col_num - 1 ? '-' : '|');
+	for (int add_dash = 0; add_dash < cols; add_dash++)
+		printf("-------%c", add_dash != cols - 1 ? '-' : '|');
 	printf("\n");
 
-	for (int print_row = 0; print_row < m->row; print_row++) {
+	for (int y = 0; y < m->height; y++) {
 
 		printf("|");
-		for (int print_col = 0; print_col < m->col; print_col++) {
-			printf(" %01.3f |", m->matrix[print_row][print_col]);
+		for (int x = 0; x < m->width; x++) {
+			printf(" %01.3f |", m->matrix[x][y]);
 		}
 		printf("\n");
 	}
 
 	printf("|");
-	for (int add_dash = 0; add_dash < col_num; add_dash++)
-		printf("-------%c", add_dash != col_num - 1 ? '-' : '|');
+	for (int add_dash = 0; add_dash < cols; add_dash++)
+		printf("-------%c", add_dash != cols - 1 ? '-' : '|');
 	printf("\n");
 
 	return 0;
 }
 
 
-int partial_derivative(int cols, matrix_t *m1, matrix_t *expected, matrix_t *variable, matrix_t *d_variable) {
+int partial_derivative(int n, matrix_t *x, matrix_t *y, matrix_t *h_theta, matrix_t *d_h_theta) {
 
-	// compute m1Xvariable
-	matrix_t *m1_variable = matrix_multiply(m1, variable);
-	matrix_print(m1);
-	matrix_print(variable);
-	matrix_print(m1_variable);
+	// compute xXh_theta
+	matrix_t *estimated_y = matrix_multiply(x, h_theta);
+	printf("x\n");
+	matrix_print(x);
+	printf("h_theta\n");
+	matrix_print(h_theta);
+	printf("res\n");
+	matrix_print(estimated_y);
 	// first comput the sum of:
-	// (estimated - expected) * m1_j
-	// for all values i = 0 -> cols
-	// for each weight value v in d_variable
+	// (estimated - y) * m1_j
+	// for all values i = 0 -> n
+	// for each weight value v in d_h_theta
 	float sum;
-	for (int v = 0; v < d_variable->row; v++) {
+	for (int j = 0; j < d_h_theta->height; j++) {
 		sum = 0;
 
-		for (int i = 0; i < cols; i++) {
-			// compute error of estimated versus expected
-			float error = m1_variable->matrix[i][0] - expected->matrix[i][0];
-			error *= m1->matrix[v][i];
+		for (int i = 0; i < n; i++) {
+			// compute error of estimated versus y
+			float error = estimated_y->matrix[0][i] - y->matrix[0][i];
+			error *= x->matrix[j][i];
 
 			sum += error;
 		}
 
-		sum /= cols;
+		sum /= n;
 
-		d_variable->matrix[v][0] = sum;
+		d_h_theta->matrix[0][j] = sum;
 	}
 
+	printf("INITIAL D_H\n");
+	matrix_print(d_h_theta);
 	return 0;
 }
 /*
 	Matrix Gradient Descent:
 
 		Takes in m1, which is a fully formed mxn matrix,
-	variable, which is an empty 1xn matrix, and expected, which is
+	h_theta, which is an empty 1xn matrix, and y, which is
 	the desired 1xn output. The algorithm continuously trys to move the
-	values of variable to get the output of m1Xvariables as close
-	to expected as possible
+	values of h_theta to get the output of m1Xh_thetas as close
+	to y as possible
 
-	At the end, variable will have the results within it.
+	At the end, h_theta will have the results within it.
 */
-int matrix_gradient_descent(matrix_t *m1, matrix_t *variable, matrix_t *expected) {
-	for (int set = 0; set < variable->row; set++)
-		variable->matrix[set][0] = 0;
+int matrix_gradient_descent(matrix_t *x, matrix_t *h_theta, matrix_t *y) {
+	for (int set = 0; set < h_theta->height; set++)
+		h_theta->matrix[0][set] = 0;
 
-	int col = m1->col;
+	int n = x->width;
 
-	if (col != variable->row)
-		return 0;
+	if (n != h_theta->height)
+		return 1;
 
-	// d_variable for finding partial derivative:
-	matrix_t *d_variable = matrix_build(variable->row, 1);
+	// d_h_theta for finding partial derivative:
+	matrix_t *d_h_theta = matrix_build(1, h_theta->height);
 	int iteration_max = 30, iter = 0;
 	while (iter < iteration_max) {
-		partial_derivative(col, m1, expected, variable, d_variable);
-		// subtract d_variable from variable:
-		matrix_multiply_scaler(d_variable, 0.5);
-		matrix_subtract(variable, d_variable, "");
+		partial_derivative(n, x, y, h_theta, d_h_theta);
+		// subtract d_h_theta from h_theta:
+		matrix_multiply_scaler(d_h_theta, 0.5);
+		matrix_subtract(h_theta, d_h_theta, "");
 
 		iter++;
 	}
