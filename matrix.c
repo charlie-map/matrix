@@ -123,6 +123,23 @@ matrix_t *matrix_subtract(matrix_t *m1, matrix_t *m2, char *subber_p) {
 	return r_m;
 }
 
+matrix_t *matrix_transpose(matrix_t *m) {
+	matrix_t *m_t = matrix_build(m->height, m->width);
+	float **m_t_value = malloc(sizeof(float *) * m->height);
+
+	for (int y = 0; y < m->height; y++) {
+		m_t_value[y] = malloc(sizeof(float) * m->width);
+
+		for (int x = 0; x < m->width; x++) {
+			m_t_value[y][x] = m->matrix[x][y];
+		}
+	}
+
+	matrix_load(m_t, m_t_value);
+
+	return m_t;
+}
+
 int check_dimensions_multi(matrix_t *m1, matrix_t *m2) {
 	if (m1->width != m2->height)
 		return 0;
@@ -199,6 +216,31 @@ int matrix_print(matrix_t *m) {
 	for (int add_dash = 0; add_dash < cols; add_dash++)
 		printf("-------%c", add_dash != cols - 1 ? '-' : '|');
 	printf("\n");
+
+	return 0;
+}
+
+/*
+	matrix_destroy
+		takes in matrix_t *m and frees its contents
+		the char f param decides if the float ** will also
+		be free. Use 'f' to free
+*/
+int matrix_destroy(matrix_t *m, ...) {
+	va_list float_free_check;
+	va_start(m, float_free_check);
+
+	char f = va_arg(float_free_check, char);
+
+	if (f == 'f') {
+		for (int free_x = 0; free_x < m->width; free_x++) {
+			free(m->matrix[free_x]);
+		}
+
+		free(m->matrix);
+	}
+
+	free(m);
 
 	return 0;
 }
