@@ -207,7 +207,7 @@ int matrix_print(matrix_t *m) {
 
 		printf("|");
 		for (int x = 0; x < m->width; x++) {
-			printf(" %01.3f |", m->matrix[x][y]);
+			printf(" %01.7f |", m->matrix[x][y]);
 		}
 		printf("\n");
 	}
@@ -250,30 +250,27 @@ int partial_derivative(int n, matrix_t *x, matrix_t *y, matrix_t *h_theta, matri
 
 	// compute xXh_theta
 	matrix_t *prediction = matrix_multiply(x, h_theta);
-	printf("prediction\n");
-	matrix_print(prediction);
+
 	// first comput the sum of:
 	// (estimated - y) * m1_j
 	// for all values i = 0 -> n
 	// for each weight value v in d_h_theta
+	matrix_t *err_pred = matrix_subtract(y, prediction, "-n");
+
 	float sum;
 	for (int j = 0; j < d_h_theta->height; j++) {
 		sum = 0;
 
 		for (int i = 0; i < n; i++) {
 			// compute error of estimated versus y
-			float error = -1 * (x->matrix[i][j] * (y->matrix[0][i] - prediction->matrix[0][i]));
+			float error = x->matrix[i][j] * err_pred->matrix[0][i];
 
 			sum += error;
 		}
 
-		sum /= n;
-
-		d_h_theta->matrix[0][j] = sum;
+		d_h_theta->matrix[0][j] = sum * -1;
 	}
 
-	printf("INITIAL D_H\n");
-	matrix_print(d_h_theta);
 	return 0;
 }
 /*
@@ -304,11 +301,11 @@ int matrix_gradient_descent(matrix_t *x, matrix_t *h_theta, matrix_t *y) {
 		partial_derivative(n, x, y, h_theta, d_h_theta);
 		// reconfigure h_theta based on the results of d_h_theta
 		for (int h_theta_y = 0; h_theta_y < h_theta->height; h_theta_y++) {
-			h_theta->matrix[0][h_theta_y] -= learning_rate * d_h_theta->matrix[0][h_theta_y];
+			h_theta->matrix[0][h_theta_y] -= learning_rate * (d_h_theta->matrix[0][h_theta_y] / n);
 		}
 
-		printf("POST ITER\n");
-		matrix_print(h_theta);
+		// printf("POST ITER\n");
+		// matrix_print(h_theta);
 
 		iter++;
 	}
