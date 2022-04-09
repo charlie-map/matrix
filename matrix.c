@@ -228,9 +228,9 @@ int matrix_print(matrix_t *m) {
 */
 int matrix_destroy(matrix_t *m, ...) {
 	va_list float_free_check;
-	va_start(m, float_free_check);
+	va_start(float_free_check, m);
 
-	char f = va_arg(float_free_check, char);
+	char f = (char) va_arg(float_free_check, int);
 
 	if (f == 'f') {
 		for (int free_x = 0; free_x < m->width; free_x++) {
@@ -249,13 +249,9 @@ int matrix_destroy(matrix_t *m, ...) {
 int partial_derivative(int n, matrix_t *x, matrix_t *y, matrix_t *h_theta, matrix_t *d_h_theta) {
 
 	// compute xXh_theta
-	matrix_t *estimated_y = matrix_multiply(x, h_theta);
-	printf("x\n");
-	matrix_print(x);
-	printf("h_theta\n");
-	matrix_print(h_theta);
-	printf("res\n");
-	matrix_print(estimated_y);
+	matrix_t *prediction = matrix_multiply(x, h_theta);
+	printf("prediction\n");
+	matrix_print(prediction);
 	// first comput the sum of:
 	// (estimated - y) * m1_j
 	// for all values i = 0 -> n
@@ -266,8 +262,7 @@ int partial_derivative(int n, matrix_t *x, matrix_t *y, matrix_t *h_theta, matri
 
 		for (int i = 0; i < n; i++) {
 			// compute error of estimated versus y
-			float error = estimated_y->matrix[0][i] - y->matrix[0][i];
-			error *= x->matrix[j][i];
+			float error = -1 * (x->matrix[i][j] * (y->matrix[0][i] - prediction->matrix[0][i]));
 
 			sum += error;
 		}
@@ -297,18 +292,23 @@ int matrix_gradient_descent(matrix_t *x, matrix_t *h_theta, matrix_t *y) {
 		h_theta->matrix[0][set] = 0;
 
 	int n = x->width;
+	float learning_rate = 0.0005;
 
 	if (n != h_theta->height)
 		return 1;
 
 	// d_h_theta for finding partial derivative:
 	matrix_t *d_h_theta = matrix_build(1, h_theta->height);
-	int iteration_max = 30, iter = 0;
+	int iteration_max = 1000, iter = 0;
 	while (iter < iteration_max) {
 		partial_derivative(n, x, y, h_theta, d_h_theta);
-		// subtract d_h_theta from h_theta:
-		matrix_multiply_scaler(d_h_theta, 0.5);
-		matrix_subtract(h_theta, d_h_theta, "");
+		// reconfigure h_theta based on the results of d_h_theta
+		for (int h_theta_y = 0; h_theta_y < h_theta->height; h_theta_y++) {
+			h_theta->matrix[0][h_theta_y] -= learning_rate * d_h_theta->matrix[0][h_theta_y];
+		}
+
+		printf("POST ITER\n");
+		matrix_print(h_theta);
 
 		iter++;
 	}

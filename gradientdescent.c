@@ -4,6 +4,7 @@
 #include "matrix.h"
 
 int gradient_test() {
+
 	matrix_t *documents = matrix_build(3, 4);
 	float **doc_values = malloc(sizeof(float *) * 3);
 	doc_values[0] = malloc(sizeof(float) * 4);
