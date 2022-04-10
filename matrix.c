@@ -37,6 +37,26 @@ matrix_t *matrix_build(int width, int height) {
 	return r_m;
 }
 
+// creats identity matrix of size nxn
+matrix_t *matrix_identity(int n) {
+	matrix_t *m_i = malloc(sizeof(matrix_t));
+
+	m_i->width = n;
+	m_i->height = n;
+	float **m_i_v = malloc(sizeof(float *) * n);
+
+	for (int x = 0; x < n; x++) {
+		for (int y = 0; y < n; y++) {
+
+			m_i_v[x][y] = x == y;
+		}
+	}
+
+	m_i->matrix = m_i_v;
+
+	return m_i;
+}
+
 int matrix_load(matrix_t *m, float **input) {
 	for (int x = 0; x < m->width; x++) {
 		for (int y = 0; y < m->height; y++) {
@@ -180,6 +200,79 @@ int matrix_multiply_scaler(matrix_t *m1, float scaler) {
 	return 0;
 }
 
+matrix_t *matrix_merge_row(matrix_t *m1, matrix_t *m2) {
+	// check matrix height
+	if (m1->height != m2->height)
+		return NULL;
+
+	// create new matrix:
+	matrix_t *merge_m = matrix_build(m1->width + m2->width, m1->height);
+
+	float **merge_m_v = malloc(sizeof(float *) * (m1->width + m2->width));
+	for (int merge_m1_x = 0; merge_m1_x < m1->width + m2->width; merge_m1_x++) {
+
+		merge_m_v[merge_m1_x] = malloc(sizeof(float) * m1->height);
+		for (int merge_m1_y = 0; merge_m1_x < m1->width && merge_m1_y < m1->height; merge_m1_y++) {
+			merge_m_v[merge_m1_x][merge_m1_y] = m1->matrix[merge_m1_x][merge_m1_y];
+		}
+
+		for (int merge_m2_y = 0; merge_m1_x >= m1->width && merge_m2_y < m2->height; merge_m2_y++) {
+			merge_m_v[merge_m1_x][merge_m2_y] = m2->matrix[merge_m1_x - m1->width][merge_m2_y];
+		}
+	}
+
+	matrix_load(merge_m, merge_m_v);
+	return merge_m;
+}
+
+matrix_t *matrix_merge_col(matrix_t *m1, matrix_t *m2) {
+	// check matrix width
+	if (m1->width != m2->width)
+		return NULL;
+
+	// create new matrix:
+	matrix_t *merge_m = matrix_build(m1->width, m1->height + m2->height);
+
+	float **merge_m_v = malloc(sizeof(float *) * (m1->width));
+	for (int merge_x = 0; merge_x < m1->width + m2->width; merge_x++) {
+
+		merge_m_v[merge_x] = malloc(sizeof(float) * (m1->height + m2->height));
+		for (int merge_y = 0; merge_y < m1->height + m2->height; merge_y++) {
+			float add_v;
+
+			if (merge_y < m1->height)
+				add_v = m1->matrix[merge_x][merge_y];
+			else
+				add_v = m2->matrix[merge_x][merge_y - m1->height];
+
+			merge_m_v[merge_x][merge_y] = add_v;
+		}
+	}
+
+	matrix_load(merge_m, merge_m_v);
+	return merge_m;
+}
+/*
+	takes in two matrices and splices the second matrix onto the
+	end of m1, either as additional columns or as additional rows.
+	m_dir is 'c' for adding columns and 'r' for adding rows
+*/
+matrix_t *matrix_merge(matrix_t *m1, matrix_t *m2, char m_dir) {
+	if (m_dir == 'c')
+		return matrix_merge_col(m1, m2);
+	else if (m_dir == 'r')
+		return matrix_merge_row(m1, m2);
+	else
+		return NULL;
+}
+
+matrix_t *matrix_inverse(matrix_t *m) {
+	if (m->width != m->height)
+		return NULL;
+
+	matrix_t *m_i = matrix_identity(m->width);
+}
+
 int matrix_print(matrix_t *m) {
 	int cols = m->width;
 
@@ -306,6 +399,32 @@ int matrix_gradient_descent(matrix_t *x, matrix_t *h_theta, matrix_t *y) {
 
 		// printf("POST ITER\n");
 		// matrix_print(h_theta);
+
+		iter++;
+	}
+
+	return 0;
+}
+
+int matrix_least_squares(matrix_t *x, matrix_t *h_theta, matrix_t *y) {
+	for (int set = 0; set < h_theta->height; set++)
+		h_theta->matrix[0][set] = 0;
+
+	int n = x->width;
+	float learning_rate = 0.0005;
+
+	if (n != h_theta->height)
+		return 1;
+
+	// d_h_theta for finding partial derivative:
+	matrix_t *d_h_theta = matrix_build(1, h_theta->height);
+	int iteration_max = 1000, iter = 0;
+	while (iter < iteration_max) {
+		partial_derivative(n, x, y, h_theta, d_h_theta);
+		// reconfigure h_theta based on the results of d_h_theta
+		for (int h_theta_y = 0; h_theta_y < h_theta->height; h_theta_y++) {
+			h_theta->matrix[0][h_theta_y] -= learning_rate * (d_h_theta->matrix[0][h_theta_y] / n);
+		}
 
 		iter++;
 	}

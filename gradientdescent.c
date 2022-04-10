@@ -84,8 +84,10 @@ int gradient_test() {
 	return 0;
 }
 
+
+
 int main() {
-	gradient_test();
+	// gradient_test();
 
 	printf("TESTS PASSED\n");
 
