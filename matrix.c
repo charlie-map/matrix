@@ -46,6 +46,8 @@ matrix_t *matrix_identity(int n) {
 	float **m_i_v = malloc(sizeof(float *) * n);
 
 	for (int x = 0; x < n; x++) {
+		m_i_v[x] = malloc(sizeof(float) * n);
+
 		for (int y = 0; y < n; y++) {
 
 			m_i_v[x][y] = x == y;
@@ -80,6 +82,24 @@ matrix_t *matrix_copy(matrix_t *m) {
 	}
 
 	return n_m;
+}
+
+float *matrix_get_row(matrix_t *A, int j) {
+	float *row = malloc(sizeof(float) * A->width);
+
+	for (int x = 0; x < A->width; x++)
+		row[x] = A->matrix[x][j];
+
+	return row;
+}
+
+float *matrix_get_col(matrix_t *A, int i) {
+	float *col = malloc(sizeof(float) * A->height);
+
+	for (int y = 0; y < A->height; y++)
+		col[y] = A->matrix[i][y];
+
+	return col;
 }
 
 int check_dimensions_add_sub(matrix_t *m1, matrix_t *m2) {
@@ -128,6 +148,17 @@ matrix_t *matrix_add(matrix_t *m1, matrix_t *m2, char *adder_p) {
 	return r_m;
 }
 
+/*
+	takes in specific row j and adds a given float *, s, from that row
+	in the inputted matrix, A
+*/
+int matrix_add_row(matrix_t *A, float *s, int j) {
+	for (int x = 0; x < A->width; x++)
+		A->matrix[x][j] += s[x];
+
+	return 0;
+}
+
 matrix_t *matrix_subtract(matrix_t *m1, matrix_t *m2, char *subber_p) {
 	if (!check_dimensions_add_sub(m1, m2))
 		return NULL;
@@ -141,6 +172,17 @@ matrix_t *matrix_subtract(matrix_t *m1, matrix_t *m2, char *subber_p) {
 	matrix_add_sub_helper(r_m, m1, m2, 0);
 
 	return r_m;
+}
+
+/*
+	takes in specific row j and subtracts a given float *, s, from that row
+	in the inputted matrix, A
+*/
+int matrix_subtract_row(matrix_t *A, float *s, int j) {
+	for (int x = 0; x < A->width; x++)
+		A->matrix[x][j] -= s[x];
+
+	return 0;
 }
 
 matrix_t *matrix_transpose(matrix_t *m) {
@@ -190,17 +232,44 @@ matrix_t *matrix_multiply(matrix_t *m1, matrix_t *m2) {
 	return r_m;
 }
 
-int matrix_multiply_scaler(matrix_t *m1, float scaler) {
-	for (int x = 0; x < m1->width; x++) {
-		for (int y = 0; y < m1->height; y++) {
-			m1->matrix[x][y] *= scaler;
+/*
+	takes in matrix A and multiplies A[x][y] by s
+
+	if i and j are -1 that means do it for that entire row/column
+
+	if i and j are set values that means only do the scaling
+	for that specific ith column or jth row
+*/
+int matrix_multiply_scaler_helper(matrix_t *A, float s, int i, int j) {
+	for (int x = i == -1 ? 0 : i; x < i == -1 ? A->width : i + 1; x++) {
+
+		for (int y = j == -1 ? 0 : j; y < j == -1 ? A->height : j + 1; y++) {
+			A->matrix[x][y] *= s;
 		}
 	}
 
 	return 0;
 }
 
-matrix_t *matrix_merge_row(matrix_t *m1, matrix_t *m2) {
+int matrix_multiply_scaler(matrix_t *m1, float scaler) {
+	matrix_multiply_scaler_helper(m1, scaler, -1, -1);
+
+	return 0;
+}
+
+int matrix_multiply_scaler_row(matrix_t *A, float s, int j) {
+	matrix_multiply_scaler_helper(A, s, -1, j);
+
+	return 0;
+}
+
+int matrix_multiply_scaler_col(matrix_t *A, float s, int i) {
+	matrix_multiply_scaler_helper(A, s, i, -1);
+
+	return 0;
+}
+
+matrix_t *matrix_merge_col(matrix_t *m1, matrix_t *m2) {
 	// check matrix height
 	if (m1->height != m2->height)
 		return NULL;
@@ -225,7 +294,7 @@ matrix_t *matrix_merge_row(matrix_t *m1, matrix_t *m2) {
 	return merge_m;
 }
 
-matrix_t *matrix_merge_col(matrix_t *m1, matrix_t *m2) {
+matrix_t *matrix_merge_row(matrix_t *m1, matrix_t *m2) {
 	// check matrix width
 	if (m1->width != m2->width)
 		return NULL;
@@ -234,7 +303,7 @@ matrix_t *matrix_merge_col(matrix_t *m1, matrix_t *m2) {
 	matrix_t *merge_m = matrix_build(m1->width, m1->height + m2->height);
 
 	float **merge_m_v = malloc(sizeof(float *) * (m1->width));
-	for (int merge_x = 0; merge_x < m1->width + m2->width; merge_x++) {
+	for (int merge_x = 0; merge_x < m1->width; merge_x++) {
 
 		merge_m_v[merge_x] = malloc(sizeof(float) * (m1->height + m2->height));
 		for (int merge_y = 0; merge_y < m1->height + m2->height; merge_y++) {
@@ -266,11 +335,144 @@ matrix_t *matrix_merge(matrix_t *m1, matrix_t *m2, char m_dir) {
 		return NULL;
 }
 
-matrix_t *matrix_inverse(matrix_t *m) {
-	if (m->width != m->height)
+matrix_t *matrix_splice_col(matrix_t *A, int start, int end) {
+	matrix_t *sub_A = matrix_build(end - start, A->height);
+
+	float **sub_A_val = malloc(sizeof(float *) * (end - start));
+
+	for (int x = start; x < end; x++) {
+
+		sub_A_val[x - start] = malloc(sizeof(float) * A->height);
+
+		for (int y = 0; y < A->height; y++) {
+			sub_A_val[x - start][y] = A->matrix[x][y];
+		}
+	}
+
+	matrix_load(sub_A, sub_A_val);
+	return sub_A;
+}
+
+matrix_t *matrix_splice_row(matrix_t *A, int start, int end) {
+	matrix_t *sub_A = matrix_build(A->width, end - start);
+
+	float **sub_A_val = malloc(sizeof(float *) * A->width);
+
+	for (int x = 0; x < A->width; x++) {
+
+		sub_A_val[x] = malloc(sizeof(float) * (end - start));
+
+		for (int y = start; y < end; y++) {
+			sub_A_val[x][y - start] = A->matrix[x][y];
+		}
+	}
+
+	matrix_load(sub_A, sub_A_val);
+	return sub_A;
+}
+
+matrix_t *matrix_splice(matrix_t *A, char s_dir, int s_start, int s_end) {
+	if (s_start >= s_end)
 		return NULL;
 
-	matrix_t *m_i = matrix_identity(m->width);
+	if (s_dir = 'c')
+		return matrix_splice_col(A, s_start, s_end);
+	else if (s_dir == 'r')
+		return matrix_splice_row(A, s_start, s_end);
+	else
+		return NULL;
+}
+
+int matrix_swap_col(matrix_t *A, int c1, int c2) {
+	float *buffer = A->matrix[c1];
+	A->matrix[c1] = A->matrix[c2];
+	A->matrix[c2] = buffer;
+
+	return 0;
+}
+
+int matrix_swap_row(matrix_t *A, int r1, int r2) {
+	float buffer = 0;
+
+	for (int x = 0; x < A->width; x++) {
+		buffer = A->matrix[x][r1];
+		A->matrix[x][r1] = A->matrix[x][r2];
+		A->matrix[x][r2] = buffer;
+	}
+
+	return 0;
+}
+
+/*
+	loops through matrix A (assumes width == height) and utilizes
+	gauss-jordan elimination to create and return the inverse matrix
+*/
+matrix_t *matrix_inverse(matrix_t *A) {
+	if (A->width != A->height)
+		return NULL;
+
+	// compute identity matrix of size A->width
+	matrix_t *I = matrix_identity(A->width);
+
+	// merge A and I to create the augmented matrix
+	matrix_t *A_m = matrix_merge(A, I, 'c');
+	matrix_print(A_m);
+
+	// **TODO: ensure matrix has all numbers on diagonal by using
+	// the pivot operation to align the matrix like:
+	/*
+		3 3 0
+		0 3 0
+		3 2 3
+
+		instead of:
+
+		0 3 0
+		3 3 0
+		3 2 3
+	*/
+
+	// start going through A_m and compute row reductions
+	for (int x = 0; x < A->width; x++) {
+
+		float x_x_val = A->matrix[x][x];
+		printf("%1.5f --> %1.5f\n", x_x_val, 1.0 / x_x_val);
+		// first multiply row x by 1/x_x_val
+		matrix_multiply_scaler_row(A_m, 1.0 / x_x_val, x);
+
+		for (int y = 0; y < A->height; y++) {
+			if (y == x)
+				continue;
+
+			float x_y_val = A->matrix[x][y];
+			if (x_y_val == 0)
+				continue;
+			// look at x_y_val and consider how to utlize
+			// x_x_val to make x_y_val 0
+			float *row = matrix_get_row(A_m, y);
+
+			// scale row to be row * x_y_val:
+			// assumes all values to left of x have already become 0
+			for (int scale_row = x; scale_row < A->width; scale_row++)
+				row[scale_row] *= -1 * x_y_val;
+
+			// add row from A->matrix row y
+			matrix_add_row(A_m, row, y);
+			free(row);
+		}
+	}
+
+	matrix_print(A_m);
+
+	// slice out the portion that was previously the idenitity matrix,
+	// this will have the inversed values within it
+	matrix_t *A_i = matrix_splice(A_m, 'c', A->width, A->width * 2);
+
+	// cleanup messes
+	matrix_destroy(I);
+	matrix_destroy(A_m);
+
+	return A_i;
 }
 
 int matrix_print(matrix_t *m) {
