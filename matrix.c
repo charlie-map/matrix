@@ -38,17 +38,17 @@ matrix_t *matrix_build(int width, int height) {
 }
 
 // creats identity matrix of size nxn
-matrix_t *matrix_identity(int n) {
+matrix_t *matrix_identity(int width, int height) {
 	matrix_t *m_i = malloc(sizeof(matrix_t));
 
-	m_i->width = n;
-	m_i->height = n;
-	float **m_i_v = malloc(sizeof(float *) * n);
+	m_i->width = width;
+	m_i->height = height;
+	float **m_i_v = malloc(sizeof(float *) * width);
 
-	for (int x = 0; x < n; x++) {
-		m_i_v[x] = malloc(sizeof(float) * n);
+	for (int x = 0; x < width; x++) {
+		m_i_v[x] = malloc(sizeof(float) * height);
 
-		for (int y = 0; y < n; y++) {
+		for (int y = 0; y < height; y++) {
 
 			m_i_v[x][y] = x == y;
 		}
@@ -82,6 +82,28 @@ matrix_t *matrix_copy(matrix_t *m) {
 	}
 
 	return n_m;
+}
+
+// computes the distance between two matrices
+float matrix_compare(matrix_t *A, matrix_t *B) {
+	float dist_sum = 0;
+
+	int big_width = A->width > B->width ? A->width : B->width;
+	int big_height = A->height > B->height ? A->height : B->height;
+
+	for (int x = 0; x < big_width; x++) {
+		for (int y = 0; y < big_height; y++) {
+			float A_val = x < A->width && y < A->height ? A->matrix[x][y] : 0;
+			float B_val = x < B->width && y < B->height ? B->matrix[x][y] : 0;
+
+			float dist = A_val - B_val;
+			dist *= dist < 0 ? -1 : 1;
+
+			dist_sum += dist;
+		}
+	}
+
+	return dist_sum;
 }
 
 float *matrix_get_row(matrix_t *A, int j) {
@@ -402,6 +424,41 @@ int matrix_swap_row(matrix_t *A, int r1, int r2) {
 
 	return 0;
 }
+
+/*
+	Set entire matrix A to the value value
+*/
+int matrix_set(matrix_t *A, float value) {
+	for (int x = 0; x < A->width; x++) {
+		for (int y = 0; y < A->height; y++) {
+			A->matrix[x][y] = value;
+		}
+	}
+
+	return 0;
+}
+
+/*
+	computes the eigenvalues for a given matrix A
+*/
+matrix_t *matrix_eigenvalue(matrix_t *A) {
+	// find first eigenvalue using an iterative calculation
+	matrix_t *v = matrix_build(1, A->height);
+
+	matrix_set(v, 1.0);
+	matrix_t *prev = matrix_copy(v);
+
+	while (1) {
+		matrix_multiply(v, A);
+	}
+}
+
+/*
+	TODO: Documentation
+*/
+int matrix_svd(matrix_t *A, matrix_t *U, matrix_t *V_t, matrix_t *Sigma) {
+
+}	
 
 /*
 	loops through matrix A (assumes width == height) and utilizes

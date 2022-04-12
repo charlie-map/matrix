@@ -13,6 +13,7 @@ matrix_t *matrix_subtract(matrix_t *m1, matrix_t *m2, char *subber_p);
 matrix_t *matrix_transpose(matrix_t *m);
 matrix_t *matrix_multiply(matrix_t *m1, matrix_t *m2);
 
+int matrix_svd(matrix_t *A, matrix_t *U, matrix_t *V_t, matrix_t *Sigma);
 matrix_t *matrix_inverse(matrix_t *A);
 
 int matrix_print(matrix_t *m);
